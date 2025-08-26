@@ -1,5 +1,4 @@
 import { getAllNews } from "./api.js";
-
 const data = await getAllNews();
 function getNav() {
   const nav = document.createElement("nav");
@@ -7,7 +6,6 @@ function getNav() {
   const home = document.createElement("a");
   home.classList.add("links");
   home.textContent = "Home";
-
   const newPostLink = document.createElement("a");
   newPostLink.classList.add("links");
   newPostLink.textContent = "NewPost";
@@ -18,18 +16,14 @@ function getNav() {
   nav.appendChild(newPostLink);
   nav.appendChild(postim);
   nav.addEventListener("click", function (e) {
+    e.preventDefault();
     if (e.target.classList.contains("links")) {
       if (e.target.textContent === "Home") {
         loadPage();
         const box = document.createElement("div");
         box.id = "box";
         root.appendChild(box);
-        let localPosts = JSON.parse(localStorage.getItem("posts") || "[]");
-        localPosts.forEach((p) => homepage(p));
-
-        getAllNews().then((apiPosts) => {
-          apiPosts.forEach((p) => homepage(p));
-        });
+        data.forEach((p) => homepage(p));
       } else if (e.target.textContent === "NewPost") {
         newPost();
       } else if (e.target.textContent === "Postim") {
@@ -47,6 +41,7 @@ function homepage(post) {
   const image = document.createElement("img");
   image.classList.add("news-image");
   image.src =
+    post.imageUrl ||
     post.urlToImage ||
     "https://cdn.geektime.co.il/wp-content/uploads/2025/08/bug-no-internet.jpg";
   const title = document.createElement("h2");
@@ -70,6 +65,7 @@ function showBigPost(post) {
   bigDiv.classList.add("big-news");
   const image = document.createElement("img");
   image.src =
+    post.imageUrl ||
     post.urlToImage ||
     "https://cdn.geektime.co.il/wp-content/uploads/2025/08/bug-no-internet.jpg";
   image.classList.add("big-news-image");
@@ -77,7 +73,8 @@ function showBigPost(post) {
   title.innerText = post.author || "No Connection";
   title.classList.add("big-news-title");
   const content = document.createElement("p");
-  content.innerText = post.content || "haker acse internet connection.";
+  content.innerText =
+    post.content || post.title || "haker acse internet connection.";
   content.classList.add("big-news-content");
   const backBtn = document.createElement("button");
   backBtn.innerText = "Home page";
@@ -88,7 +85,18 @@ function showBigPost(post) {
     const box = document.createElement("div");
     box.id = "box";
     root.appendChild(box);
-    data.forEach((p) => homepage(p));
+    let localPosts = [];
+    try {
+      localPosts = JSON.parse(localStorage.getItem("data") || "[]");
+      if (!Array.isArray(localPosts)) localPosts = [];
+    } catch (e) {
+      localPosts = [];
+    }
+    localPosts.forEach((p) => {
+      try {
+        homepage(p);
+      } catch (err) {}
+    });
   };
   bigDiv.appendChild(image);
   bigDiv.appendChild(title);
@@ -104,8 +112,7 @@ function newPost() {
   form.classList.add("NP-form");
   const image = document.createElement("input");
   image.type = "file";
-  image.textContent = "Upload Image png";
-  image.accept = "image/png";
+  image.accept = "image/*";
   const input = document.createElement("input");
   input.type = "text";
   input.placeholder = "Enter post title";
@@ -122,18 +129,17 @@ function newPost() {
     e.preventDefault();
     const title = input.value.trim();
     const content = textarea.value.trim();
-    let imageUrl = "";
-    if (image.files && image.files[0]) {
-      imageUrl = URL.createObjectURL(image.files[0]);
-    }
-    if (!title || !content) {
+    if (!title || !content || !image.files[0]) {
       alert("not all fields filled");
       return;
     }
-    const post = { title, content, imageUrl, date: new Date().toISOString() };
-    let posts = JSON.parse(localStorage.getItem("posts") || "[]");
-    posts.push(post);
-    localStorage.setItem("posts", JSON.stringify(posts));
+    // צור blob URL להצגת התמונה
+    const imageUrl = URL.createObjectURL(image.files[0]);
+    const author = "You";
+    const post = { title, content, imageUrl, author };
+    let data = JSON.parse(localStorage.getItem("data") || "[]");
+    data.push(post);
+    localStorage.setItem("data", JSON.stringify(data));
     alert("Post saved successfully!");
     loadPage();
   });
